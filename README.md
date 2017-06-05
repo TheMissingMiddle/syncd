@@ -8,6 +8,8 @@ Still in early development. Should be able to sync user data in the next commit 
 It is presumed that `syncd` is deployed on a Debian-based distribution. The requirements are listed below, and all available through installation via `apt-get`.
 
 **Requirements**:
+
+**UPDATE**: The `mongoc` driver version installed through `apt-get` is too old. Consider [compiling from source](http://mongoc.org) if necessary.
 ```
  libmongoc0.10
  libmongoc-dev

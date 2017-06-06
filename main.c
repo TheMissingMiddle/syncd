@@ -11,6 +11,12 @@
 #define MONGO_EXEC_FAILURE 12
 #define REDIS_CONNECT_FAILURE 13
 #define REDIS_CONNECT_SUCCESS 113
+#define PARSE_SUCCESS 201
+#define PARSE_FAILURE 202
+#define STATE_HEADER_PARSE_DONE 203
+#define STATE_BODY_PUSH 204
+#define STATE_BODY_PULL 205
+#define IS_VALID_CHAR(c) (c>=97&&c<=122)||(c>=65&&c<=90)||(c>=48&&c<=57) /* (is lower case) || (is upper case) || (is digit) */
 #define CUSTOM_MONGO_FIND_WITH_OPTS(collection, query) mongoc_collection_find(collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL)
 mongoc_client_t *mongo_client = NULL;
 redisContext *redis_client = NULL;
@@ -23,6 +29,7 @@ int init_redis(const char *redis_address, int redis_port) {
         printf("Redis Connect Error: %s\n", redis_client->errstr);
         return REDIS_CONNECT_FAILURE;
     }
+    redisCommand(redis_client, "AUTH foobar");
     return REDIS_CONNECT_SUCCESS;
 }
 
@@ -66,7 +73,7 @@ int cache_all_users() {
     if((user = mongoc_client_get_collection(mongo_client, "tmmbackend", "users"))==NULL) return MONGO_GETDATABASE_FAILURE;
     // specify empty doc
     empty_query = bson_new();
-    printf(" - query");
+    printf(" - query\n");
     query_cursor = CUSTOM_MONGO_FIND_WITH_OPTS(user, empty_query);
     while(mongoc_cursor_next(query_cursor, &doc)) {
         printf("printing next...\n");
@@ -76,7 +83,7 @@ int cache_all_users() {
         const char * emailKey = bson_iter_key(&email_iter);
         const char * emailVal = bson_iter_utf8(&email_iter, NULL);
         printf("\tK/v result: %s / %s \n", emailKey, emailVal);
-
+        redisReply * reply = redisCommand(redis_client, "SET _syncd_pulled_tmmbackend_users_%s %s", emailVal, queriedObject);
         bson_free(queriedObject);
     }
     bson_destroy(empty_query);
@@ -89,10 +96,15 @@ int main() {
     printf("mongo init\n");
     if( init_mongo("mongodb://localhost:27017") == MONGO_CONNECT_SUCCESS ) {
         printf("catching documents\n");
-        cache_all_users();
+        if( init_redis("127.0.0.1", 6379) == REDIS_CONNECT_SUCCESS ) {
+            cache_all_users();
+        } else {
+            printf("redis init failure!");
+        }
     } else {
         printf("mongo init failure!");
     }
+
 
     return 0;
 }

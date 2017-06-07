@@ -5,13 +5,15 @@
   "push": [
     {
       "collection": "messages",
-      "redis-data-type": "list"
+      "redis-data-type": "list",
+      "misc": "blabla"
     }
   ],
   "pull": [
     {
       "collection": "users",
-      "redis-key-field": "email"
+      "redis-key-field": "email",
+      "misc": "ignored"
     }
   ]
 }

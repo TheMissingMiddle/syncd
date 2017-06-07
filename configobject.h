@@ -13,9 +13,9 @@
 #define SYNCD_QUEUE_OP_SUCCESS 11
 #define SYNCD_QUEUE_OP_FAILURE 12
 typedef struct {
-    char * collection;
-    char * redis;
-    char * misc;
+    const char *collection;
+    const char *redis;
+    const char *misc;
 } syncd_queue_element_t;
 
 typedef struct {
@@ -31,5 +31,19 @@ typedef struct {
     syncd_queue_t push;
     syncd_queue_t pull;
 } syncd_config_t;
+
+int
+syncd_queue_create_queue_element(syncd_queue_element_t *element, const char *col, const char *red, const char *misc);
+
+int syncd_queue_init(syncd_queue_t *queue, size_t optional_length);
+
+int syncd_queue_insert(syncd_queue_t *queue, syncd_queue_element_t *element);
+
+int syncd_queue_peek(syncd_queue_t *queue, syncd_queue_element_t *element);
+
+int syncd_queue_pop(syncd_queue_t *queue, syncd_queue_element_t *element);
+
+void syncd_queue_destroy(syncd_queue_t *queue);
+
 
 #endif //MAGICSYNC_CONFIGOBJECT_H

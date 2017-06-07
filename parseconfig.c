@@ -3,16 +3,15 @@
 //
 
 #include "parseconfig.h"
-
+#include "configobject.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <bson.h>
 
 #define IS_BSON_SUBDOCUMENT(itr_ref, itr_child_ref, doc, name) \
     (bson_iter_init_find(itr_ref, doc, name) && \
     bson_iter_recurse(itr_ref, itr_child_ref))
 
-static bson_iter_t getf(const bson_t *b, char *key) {
+static bson_iter_t bgetf(const bson_t *b, char *key) {
     bson_iter_t iter;
     if (bson_iter_init(&iter, b) && bson_iter_find(&iter, key)) {
         return iter;
@@ -42,8 +41,6 @@ int parse_config(const char *config_file_path) {
     FILE *fp;
     char c, *buf;
     int t = 1;
-
-    printf("parse_config(): reading in the document...");
     if ((fp = fopen(config_file_path, "r")) == NULL) return PARSECONFIG_PARSE_FAILURE;
     while ((c = fgetc(fp)) != EOF)++t;
     rewind(fp);
@@ -59,14 +56,9 @@ int parse_config(const char *config_file_path) {
         bson_destroy(bs);
         return PARSECONFIG_PARSE_FAILURE;
     }
-    printf("parse_config(): read in document raw format\n");
-    printf("%s\n", buf);
-    printf("parse_config(): read in document BSON format\n");
-    printf("%s\n\n", bson_as_json(bs, NULL));
-    printf("parse_config(): parsing each document");
-    port = getf(bs, "port");
-    address = getf(bs, "address");
-    mongo_db_name = getf(bs, "mongo-db-name");
+    port = bgetf(bs, "port");
+    address = bgetf(bs, "address");
+    mongo_db_name = bgetf(bs, "mongo-db-name");
     if ((address.len && mongo_db_name.len) == 0) {
         printf("parse_config(): Parsing failure. Some fields are not specified.");
         free(buf);
@@ -83,30 +75,49 @@ int parse_config(const char *config_file_path) {
         bson_destroy(bs);
         return PARSECONFIG_PARSE_FAILURE;
     }
-    printf("parse_config(): string parsing results: %d, %s, %s\n", int_port, str_address, str_mongo_db_name);
-    printf("parse_config(): string parsing finished, parsing arrays push/pull.\n");
     // parsing arrays, push & pull
     // do sub-document parsing
+    syncd_queue_t push_q;
+    syncd_queue_t pull_q;
+    syncd_queue_init(&push_q, 0);
+    syncd_queue_init(&pull_q, 0);
     if (IS_BSON_SUBDOCUMENT(&push_actions, &push_child, bs, "push")) {
         printf("push: VOILA!!\n");
         unsigned int counter = 0;
         while (bson_iter_next(&push_child)) {
             // do parsing of each array elements (3rd-level sub-document)
             bson_iter_t array_element;
-            char str_counter[8];
-            if (sprintf(str_counter, "%d", counter) > 0) {
-                if (IS_BSON_SUBDOCUMENT(&push_child, &array_element, bs, str_counter)) {
-
-                } else {
+            if (bson_iter_recurse(&push_child, &array_element)) {
+                const char *collection = NULL;
+                const char *data_type = NULL;
+                const char *misc = NULL;
+                while (bson_iter_next(&array_element)) {
+                    if (strcmp(bson_iter_key(&array_element), "collection") == 0) {
+                        collection = bson_iter_utf8(&array_element, NULL);
+                    } else if (strcmp(bson_iter_key(&array_element), "redis-data-type") == 0) {
+                        data_type = bson_iter_utf8(&array_element, NULL);
+                    } else if (strcmp(bson_iter_key(&array_element), "misc") == 0) {
+                        misc = bson_iter_utf8(&array_element, NULL);
+                    } else {
+                        free(buf);
+                        bson_destroy(bs);
+                        printf("parse_config(): invalid fields in array sub-document. Exiting...");
+                        return PARSECONFIG_PARSE_FAILURE;
+                    }
+                }
+                if (collection == NULL || data_type == NULL || misc == NULL) {
                     free(buf);
                     bson_destroy(bs);
-                    printf("parse_config(): push definition array sub-document is blank. Exiting...\n");
+                    printf("parse_config(): array sub-document contains blank or incorrect fields. Exiting...");
                     return PARSECONFIG_PARSE_FAILURE;
                 }
+                syncd_queue_element_t *elm;
+                syncd_queue_create_queue_element(elm, collection, data_type, misc);
+                syncd_queue_insert(&push_q, elm);
             } else {
                 free(buf);
                 bson_destroy(bs);
-                printf("parse_config(): wierd sprintf() error... Idk why... panicking...\n");
+                printf("parse_config(): push definition array sub-document is blank. Exiting...\n");
                 return PARSECONFIG_PARSE_FAILURE;
             }
         }
@@ -116,7 +127,54 @@ int parse_config(const char *config_file_path) {
         bson_destroy(bs);
         return PARSECONFIG_PARSE_FAILURE;
     }
+    if (IS_BSON_SUBDOCUMENT(&pull_actions, &pull_child, bs, "pull")) {
+        printf("pull: VOILA!!\n");
+        while (bson_iter_next(&pull_child)) {
+            // do parsing of each array elements (3rd-level sub-document)
+            bson_iter_t array_element;
+            if (bson_iter_recurse(&pull_child, &array_element)) {
+                const char *collection = NULL;
+                const char *redis_key_field = NULL;
+                const char *misc = NULL;
+                while (bson_iter_next(&array_element)) {
+                    if (strcmp(bson_iter_key(&array_element), "collection") == 0) {
+                        collection = bson_iter_utf8(&array_element, NULL);
+                    } else if (strcmp(bson_iter_key(&array_element), "redis-key-field") == 0) {
+                        redis_key_field = bson_iter_utf8(&array_element, NULL);
+                    } else if (strcmp(bson_iter_key(&array_element), "misc") == 0) {
+                        misc = bson_iter_utf8(&array_element, NULL);
+                    } else {
+                        free(buf);
+                        bson_destroy(bs);
+                        printf("parse_config(): invalid fields in array sub-document. Exiting...");
+                        return PARSECONFIG_PARSE_FAILURE;
+                    }
+                }
+                if (collection == NULL || redis_key_field == NULL || misc == NULL) {
+                    free(buf);
+                    bson_destroy(bs);
+                    printf("parse_config(): array sub-document contains blank or incorrect fields. Exiting...");
+                    return PARSECONFIG_PARSE_FAILURE;
+                }
+                syncd_queue_element_t *elm;
+                syncd_queue_create_queue_element(elm, collection, redis_key_field, misc);
+                syncd_queue_insert(&pull_q, elm);
+            } else {
+                free(buf);
+                bson_destroy(bs);
+                printf("parse_config(): pull definition array sub-document is blank. Exiting...\n");
+                return PARSECONFIG_PARSE_FAILURE;
+            }
+        }
+    } else {
+        printf("parse_config(): Parsing failure. \"pull\" field is not a valid sub-document.");
+        free(buf);
+        bson_destroy(bs);
+        return PARSECONFIG_PARSE_FAILURE;
+    }
     free(buf);
     bson_destroy(bs);
+    syncd_queue_destroy(&push_q);
+    syncd_queue_destroy(&pull_q);
     return 0;
 }

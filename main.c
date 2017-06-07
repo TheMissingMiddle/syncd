@@ -4,6 +4,7 @@
 #include <libmongoc-1.0/mongoc.h>
 #include <hiredis/hiredis.h>
 #include <unistd.h>
+#include "parseconfig.h"
 #define MONGO_CONNECT_FAILURE 10
 #define MONGO_CONNECT_SUCCESS 110
 #define MONGO_GETDATABASE_FAILURE 11
@@ -136,7 +137,13 @@ int fetch_messages(char * collection_name, char * database_name) {
     freeReplyObject(keys); // we only need to free once (keys * command)
 }
 
+void test() {
+    printf("test(): return result: %d", parse_config("/home/alex/Projects/magicsync/sync-config.json"));
+}
+
 int main() {
+    test();
+    return 0;
     printf("mongo init\n");
     if (init_mongo("mongodb://localhost:27017") == MONGO_CONNECT_SUCCESS) {
         printf("catching documents\n");

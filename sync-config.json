@@ -1,0 +1,17 @@
+{
+  "port": 1333,
+  "address": "127.0.0.1",
+  "mongo-db-name": "tmmbackend",
+  "push": [
+    {
+      "collection": "messages",
+      "redis-data-type": "list"
+    }
+  ],
+  "pull": [
+    {
+      "collection": "users",
+      "redis-key-field": "email"
+    }
+  ]
+}

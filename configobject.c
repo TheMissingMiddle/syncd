@@ -6,10 +6,11 @@
 #include <stdlib.h>
 #include "configobject.h"
 
-int syncd_queue_create_queue_element(syncd_queue_element_t * element, void * data, size_t length) {
+int syncd_queue_create_queue_element(syncd_queue_element_t * element, char * col, char * red, char * misc) {
     element = malloc(sizeof(element));
-    element->len = length;
-    element->raw = data;
+    element->collection = col;
+    element->misc = misc;
+    element->redis = red;
 }
 
 int syncd_queue_init(syncd_queue_t * queue, size_t optional_length) {
@@ -49,20 +50,22 @@ int syncd_queue_insert(syncd_queue_t * queue, syncd_queue_element_t * element) {
 int syncd_queue_peek(syncd_queue_t * queue, syncd_queue_element_t * element) {
     if(queue->ptr < 0) return SYNCD_QUEUE_OP_FAILURE; // no elements to peek!
     syncd_queue_element_t e = queue->q[0];
-    element->len = e.len;
-    element->raw = e.raw;
+    element->redis = e.redis;
+    element->misc = e.misc;
+    element->collection = e.collection;
     return SYNCD_QUEUE_OP_SUCCESS;
 }
 
 int syncd_queue_pop(syncd_queue_t * queue, syncd_queue_element_t * element) {
     if(queue->ptr < 0) return SYNCD_QUEUE_OP_FAILURE; // no elements to pop!
     syncd_queue_element_t e = queue->q[0];
-    element->len = e.len;
-    element->raw = e.raw;
+    element->collection = e.collection;
+    element->misc = e.misc;
+    element->redis = e.redis;
     // but now...
-    queue->q[0].len = 0;
-    free(queue->q[0].raw);
-    queue->q[0].raw = NULL;
+    free(queue->q[0].collection);
+    free(queue->q[0].redis);
+    free(queue->q[0].misc);
     --queue->ptr;
     if(queue->ptr == 0) {
         // unique case when only one is left
@@ -76,3 +79,4 @@ int syncd_queue_pop(syncd_queue_t * queue, syncd_queue_element_t * element) {
     queue->q = ptr;
     return SYNCD_QUEUE_OP_SUCCESS;
 }
+

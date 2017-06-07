@@ -13,8 +13,9 @@
 #define SYNCD_QUEUE_OP_SUCCESS 11
 #define SYNCD_QUEUE_OP_FAILURE 12
 typedef struct {
-    size_t len;
-    void *raw;
+    char * collection;
+    char * redis;
+    char * misc;
 } syncd_queue_element_t;
 
 typedef struct {

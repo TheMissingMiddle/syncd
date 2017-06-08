@@ -5,6 +5,7 @@
 #include <hiredis/hiredis.h>
 #include <unistd.h>
 #include "parseconfig.h"
+#include "configobject.h"
 #define MONGO_CONNECT_FAILURE 10
 #define MONGO_CONNECT_SUCCESS 110
 #define MONGO_GETDATABASE_FAILURE 11
@@ -161,4 +162,5 @@ int main() {
 
 
     return 0;
+
 }

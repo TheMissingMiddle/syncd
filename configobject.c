@@ -6,91 +6,94 @@
 #include <stdlib.h>
 #include "configobject.h"
 
-int
-syncd_queue_create_queue_element(syncd_queue_element_t *element, const char *col, const char *red, const char *misc) {
-    element = malloc(sizeof(element));
-    element->collection = col;
-    element->misc = misc;
-    element->redis = red;
-}
+#define PRINT(functname, x) printf("syncd vector %s(): ERR %s", functname, x);
 
-int syncd_queue_init(syncd_queue_t *queue, size_t optional_length) {
-    if (optional_length != 0) {
-        // create using user-specified length
-        queue->len = optional_length;
-        queue->ptr = -1;
-        queue->q = malloc(sizeof(syncd_queue_element_t) * optional_length);
-        return (queue->q != NULL) ? SYNCD_QUEUE_OP_SUCCESS : SYNCD_QUEUE_OP_FAILURE;
-    } else {
-        // create using default length
-        queue->len = SYNCD_QUEUE_INIT_LEN;
-        queue->ptr = 0;
-        queue->q = malloc(sizeof(syncd_queue_element_t) * SYNCD_QUEUE_INIT_LEN);
-        return (queue->q != NULL) ? SYNCD_QUEUE_OP_SUCCESS : SYNCD_QUEUE_OP_FAILURE;
+int init_element(struct vec_element_t *element, const char *a, const char *b, const char *c) {
+    element->collection = a;
+    element->redis = b;
+    element->misc = c;
+    if(element->collection==NULL||element->redis==NULL||element->misc==NULL) {
+        PRINT("init_element", "one or more elements passed in are null");
+        return VEC_FAILURE;
     }
+    return VEC_SUCCESS;
 }
 
-int syncd_queue_insert(syncd_queue_t *queue, syncd_queue_element_t *element) {
-    if (queue->ptr > queue->len) {
-        // a little big!!
-        // reallocate
-        syncd_queue_element_t *n = realloc(queue->q,
-                                           sizeof(syncd_queue_element_t) * (queue->len + SYNCD_QUEUE_ADD_SLOTS));
-        if (n == NULL) {
-            printf("syncd_queue_insert(): realloc() failure, panicking...");
-            free(queue->q);
-            return SYNCD_QUEUE_OP_FAILURE;
+int init_vect(struct vec_t *vec) {
+    vec->ptr = -1;
+    vec->len = NUM_OF_ELEMENTS;
+    vec->elements = malloc(sizeof(struct vec_element_t) * NUM_OF_ELEMENTS);
+    if(vec->elements==NULL) {
+        PRINT("init_vect", "malloc() vailure while initializing vector.");
+        return VEC_FAILURE;
+    }
+    return VEC_SUCCESS;
+}
+
+int add_size_vect(struct vec_t *vec, unsigned int addSize) {
+    struct vec_element_t *newSize = realloc(vec->elements,
+                                            sizeof(vec->elements) + addSize * sizeof(struct vec_element_t));
+    if(newSize==NULL) {
+        PRINT("add_size_vect", "realloc() failure. CANNOT re-allocate vector to new size.");
+        return VEC_FAILURE;
+    }
+    vec->elements = newSize;
+    return VEC_SUCCESS;
+}
+
+int append_vect(struct vec_t *vec, struct vec_element_t *e) {
+    if (vec->ptr >= vec->len) {
+        if(add_size_vect(vec, DOUBLE_SIZE)==VEC_FAILURE) {
+            PRINT("append","Throwing realloc failure down the link.");
+            return VEC_FAILURE;
         }
-        queue->q = n;
-        queue->len += SYNCD_QUEUE_ADD_SLOTS;
     }
-    queue->q[++queue->ptr] = *element;
-    return SYNCD_QUEUE_OP_SUCCESS;
-
+    vec->elements[++vec->ptr] = *e;
+    return VEC_SUCCESS;
 }
 
-int syncd_queue_peek(syncd_queue_t *queue, syncd_queue_element_t *element) {
-    if (queue->ptr < 0) return SYNCD_QUEUE_OP_FAILURE; // no elements to peek!
-    syncd_queue_element_t e = queue->q[0];
-    element->redis = e.redis;
-    element->misc = e.misc;
-    element->collection = e.collection;
-    return SYNCD_QUEUE_OP_SUCCESS;
+int peek_vect(struct vec_t *vec, struct vec_element_t *e) {
+    if (vec->ptr == -1) {
+        PRINT("peek_vect", "vector is empty. Nothing to peek_vect!");
+        return VEC_FAILURE;
+    }
+    struct vec_element_t e1 = vec->elements[0];
+    e->collection = e1.collection;
+    e->redis = e1.redis;
+    e->misc = e1.misc;
+    return VEC_SUCCESS;
 }
 
-int syncd_queue_pop(syncd_queue_t *queue, syncd_queue_element_t *element) {
-    if (queue->ptr < 0) return SYNCD_QUEUE_OP_FAILURE; // no elements to pop!
-    syncd_queue_element_t e = queue->q[0];
-    element->collection = e.collection;
-    element->misc = e.misc;
-    element->redis = e.redis;
-    // but now...
-    free((char *)queue->q[0].collection);
-    free((char *)queue->q[0].redis);
-    free((char *)queue->q[0].misc);
-    --queue->ptr;
-    if (queue->ptr == 0) {
-        // unique case when only one is left
-        return SYNCD_QUEUE_OP_SUCCESS;
+int pop_back_vect(struct vec_t *vec, struct vec_element_t *recv) {
+    if(vec->ptr==-1) {
+        PRINT("pop_back_vect", "vector is empty. Nothing to pop!");
+        return VEC_FAILURE;
     }
-    void *ptr = &queue->q[1];
-    if (ptr == NULL) {
-        printf("syncd_queue_pop(): Err: len doesn't match! panicking...");
-        return SYNCD_QUEUE_OP_FAILURE;
-    }
-    queue->q = ptr;
-    return SYNCD_QUEUE_OP_SUCCESS;
+    const struct vec_element_t d1 = vec->elements[--vec->ptr];
+    recv->redis = d1.redis;
+    recv->collection = d1.collection;
+    recv->misc = d1.misc;
+    return VEC_SUCCESS;
 }
 
-void syncd_queue_destroy(syncd_queue_t *queue) {
-    int i;
-    for (i = 0; i < queue->ptr; ++i) {
-        free((char *)queue->q[i].collection);
-        free((char *)queue->q[i].redis);
-        free((char *)queue->q[i].misc);
+int pop_front_vect(struct vec_t *vec, struct vec_element_t *recv) {
+    if(vec->ptr==-1) {
+        PRINT("pop_front_vect", "vector is empty. Nothing to pop!");
+        return VEC_FAILURE;
     }
-    free(queue->q);
-    queue->len = 0;
-    queue->ptr = -1;
+    const struct vec_element_t t1 = vec->elements[0];
+    recv->redis = t1.redis;
+    recv->collection = t1.collection;
+    recv->misc = t1.misc;
+    if(vec->ptr==0) {
+        --vec->ptr;
+    } else {
+        void * p = &vec->elements[1];
+        vec->elements = p;
+    }
+    return VEC_SUCCESS;
 }
+
+
+
 

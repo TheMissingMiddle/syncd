@@ -77,12 +77,11 @@ int parse_config(const char *config_file_path) {
     }
     // parsing arrays, push & pull
     // do sub-document parsing
-    syncd_queue_t push_q;
-    syncd_queue_t pull_q;
-    syncd_queue_init(&push_q, 0);
-    syncd_queue_init(&pull_q, 0);
+    SYNCD_GLOBAL_VECTOR push_vector;
+    SYNCD_GLOBAL_VECTOR pull_vector;
+    init_vect(&push_vector);
+    init_vect(&pull_vector);
     if (IS_BSON_SUBDOCUMENT(&push_actions, &push_child, bs, "push")) {
-        printf("push: VOILA!!\n");
         unsigned int counter = 0;
         while (bson_iter_next(&push_child)) {
             // do parsing of each array elements (3rd-level sub-document)
@@ -111,9 +110,9 @@ int parse_config(const char *config_file_path) {
                     printf("parse_config(): array sub-document contains blank or incorrect fields. Exiting...");
                     return PARSECONFIG_PARSE_FAILURE;
                 }
-                syncd_queue_element_t *elm;
-                syncd_queue_create_queue_element(elm, collection, data_type, misc);
-                syncd_queue_insert(&push_q, elm);
+                SYNCD_VEC_ELEMENT this_element;
+                init_element(&this_element,collection,data_type,misc);
+                append_vect(&push_vector, &this_element);
             } else {
                 free(buf);
                 bson_destroy(bs);
@@ -122,13 +121,12 @@ int parse_config(const char *config_file_path) {
             }
         }
     } else {
-        printf("parse_config(): Parsing failure. \"push\" field is not a valid sub-document.");
+        printf("parse_config(): Parsing failure. \"push\" field is not collection valid sub-document.");
         free(buf);
         bson_destroy(bs);
         return PARSECONFIG_PARSE_FAILURE;
     }
     if (IS_BSON_SUBDOCUMENT(&pull_actions, &pull_child, bs, "pull")) {
-        printf("pull: VOILA!!\n");
         while (bson_iter_next(&pull_child)) {
             // do parsing of each array elements (3rd-level sub-document)
             bson_iter_t array_element;
@@ -156,9 +154,9 @@ int parse_config(const char *config_file_path) {
                     printf("parse_config(): array sub-document contains blank or incorrect fields. Exiting...");
                     return PARSECONFIG_PARSE_FAILURE;
                 }
-                syncd_queue_element_t *elm;
-                syncd_queue_create_queue_element(elm, collection, redis_key_field, misc);
-                syncd_queue_insert(&pull_q, elm);
+                SYNCD_VEC_ELEMENT this_element;
+                init_element(&this_element, collection, redis_key_field, misc);
+                append_vect(&pull_vector, &this_element);
             } else {
                 free(buf);
                 bson_destroy(bs);
@@ -167,14 +165,13 @@ int parse_config(const char *config_file_path) {
             }
         }
     } else {
-        printf("parse_config(): Parsing failure. \"pull\" field is not a valid sub-document.");
+        printf("parse_config(): Parsing failure. \"pull\" field is not collection valid sub-document.");
         free(buf);
         bson_destroy(bs);
         return PARSECONFIG_PARSE_FAILURE;
     }
     free(buf);
     bson_destroy(bs);
-    syncd_queue_destroy(&push_q);
-    syncd_queue_destroy(&pull_q);
+
     return 0;
 }

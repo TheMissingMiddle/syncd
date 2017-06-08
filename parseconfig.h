@@ -5,7 +5,9 @@
 #ifndef MAGICSYNC_PARSECONFIG_H
 #define MAGICSYNC_PARSECONFIG_H
 
-#define PARSECONFIG_PARSE_FAILURE 10
-int parse_config(const char * path);
+#include "configobject.h"
 
+#define PARSECONFIG_PARSE_FAILURE 10
+int parse_config(const char * path, syncd_config_t *config);
+void config_destroy(syncd_config_t * config);
 #endif //MAGICSYNC_PARSECONFIG_H

@@ -7,9 +7,59 @@
       "collection": "messages",
       "redis-data-type": "list",
       "misc": "blabla"
+    },
+    {
+      "collection": "messages",
+      "redis-data-type": "list",
+      "misc": "blabla"
+    },
+    {
+      "collection": "messages",
+      "redis-data-type": "list",
+      "misc": "blabla"
+    },
+    {
+      "collection": "messages",
+      "redis-data-type": "list",
+      "misc": "blabla"
+    },
+    {
+      "collection": "messages",
+      "redis-data-type": "list",
+      "misc": "blabla"
     }
   ],
   "pull": [
+    {
+      "collection": "users",
+      "redis-key-field": "email",
+      "misc": "ignored"
+    },
+    {
+      "collection": "users",
+      "redis-key-field": "email",
+      "misc": "ignored"
+    },
+    {
+      "collection": "users",
+      "redis-key-field": "email",
+      "misc": "ignored"
+    },
+    {
+      "collection": "users",
+      "redis-key-field": "email",
+      "misc": "ignored"
+    },
+    {
+      "collection": "users",
+      "redis-key-field": "email",
+      "misc": "ignored"
+    },
+    {
+      "collection": "users",
+      "redis-key-field": "email",
+      "misc": "ignored"
+    },
     {
       "collection": "users",
       "redis-key-field": "email",

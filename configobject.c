@@ -94,6 +94,17 @@ int pop_front_vect(struct vec_t *vec, struct vec_element_t *recv) {
     return VEC_SUCCESS;
 }
 
-
+int vect_iter_next(struct vec_t * vec, struct vec_element_t * recv) {
+    static int iter_counter = 0;
+    if(iter_counter <= vec->ptr) {
+        *recv = vec->elements[iter_counter];
+        ++iter_counter;
+        return 1;
+    } else {
+        iter_counter = 0;
+        recv=NULL;
+        return 0;
+    }
+}
 
 

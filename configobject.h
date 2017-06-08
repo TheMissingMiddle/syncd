@@ -28,8 +28,8 @@ struct vec_t {
 #define SYNCD_GLOBAL_VECTOR static struct vec_t
 typedef struct {
     int port;
-    char *address;
-    char *mongo_db_name;
+    const char *address;
+    const char *mongo_db_name;
     struct vec_t push;
     struct vec_t pull;
 } syncd_config_t;
@@ -49,5 +49,5 @@ int pop_back_vect(struct vec_t *vec, struct vec_element_t *recv);
 
 int pop_front_vect(struct vec_t *vec, struct vec_element_t *recv);
 
-
+int vect_iter_next(struct vec_t * vec, struct vec_element_t * recv);
 #endif //MAGICSYNC_CONFIGOBJECT_H

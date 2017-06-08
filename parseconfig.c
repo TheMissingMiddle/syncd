@@ -24,7 +24,7 @@ static bson_iter_t bgetf(const bson_t *b, char *key) {
     }
 }
 
-int parse_config(const char *config_file_path) {
+int parse_config(const char *config_file_path, syncd_config_t * config) {
     printf("parse_config(): initializing vairables...");
     bson_t *bs;
     bson_error_t err;
@@ -170,8 +170,32 @@ int parse_config(const char *config_file_path) {
         bson_destroy(bs);
         return PARSECONFIG_PARSE_FAILURE;
     }
+    config->address = str_address;
+    config->mongo_db_name = str_mongo_db_name;
+    config->port = int_port;
+    config->push = push_vector;
+    config->pull = pull_vector;
     free(buf);
     bson_destroy(bs);
 
     return 0;
+}
+
+void config_destroy(syncd_config_t * config) {
+    config->port = -1;
+    config->push.len = 0;
+    config->pull.len = 0;
+    bson_free((char *)config->address);
+    bson_free((char *)config->mongo_db_name);
+    int i;
+    for(i = 0; i <= config->push.ptr; i++) {
+        bson_free((char *)config->push.elements[i].redis);
+        bson_free((char *)config->push.elements[i].collection);
+        bson_free((char *)config->push.elements[i].misc);
+    }
+    for(i = 0; i <= config->pull.ptr; i++) {
+        bson_free((char *)config->pull.elements[i].redis);
+        bson_free((char *)config->pull.elements[i].collection);
+        bson_free((char *)config->pull.elements[i].misc);
+    }
 }

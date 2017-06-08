@@ -139,7 +139,18 @@ int fetch_messages(char * collection_name, char * database_name) {
 }
 
 void test() {
-    printf("test(): return result: %d", parse_config("/home/alex/Projects/magicsync/sync-config.json"));
+    static syncd_config_t config;
+    printf("test(): return result: %d\n", parse_config("/home/alex/Projects/magicsync/sync-config.json", &config));
+    printf("config: addr %s\tport %d\tDB Name %s\nPull config:\n", config.address, config.port, config.mongo_db_name);
+    struct vec_element_t recv;
+    while(vect_iter_next(&(config.push), &recv)) {
+        printf("\tCollection: %s\n\tRedis: %s\n\tMisc: %s\n", recv.collection, recv.redis, recv.misc);
+    }
+    printf("Pull config:\n");
+    while(vect_iter_next(&(config.pull), &recv)) {
+        printf("\tCollection:%s\n\tRedis:%s\n\tMisc:%s\n", recv.collection, recv.redis, recv.misc);
+    }
+    config_destroy(&config);
 }
 
 int main() {

@@ -23,7 +23,6 @@
  */
 
 #include "actors.h"
-#include "parseconfig.h"
 #include "configobject.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +42,28 @@
 #define IS_VALID_CHAR(c) (c>=97&&c<=122)||(c>=65&&c<=90)||(c>=48&&c<=57) /* (is lower case) || (is upper case) || (is digit) */
 #define CUSTOM_MONGO_FIND_WITH_OPTS(collection, query) mongoc_collection_find(collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL)
 #define PRINT(fn, x) printf("%s(): ERR : %s\n", fn, x)
+#define TASK_QUEUE_PULL 1
+#define TASK_QUEUE_PUSH 2
+#define URGENCY_REAL_TIME 3
+#define URGENCY_IMPORTANT 4
+#define URGENCY_MEDIOCRE 5
+#define URGENCY_LOW 6
+#define THREAD_QUEUE_SUCCESS 1
+#define THREAD_QUEUE_FAILURE 0
+#define THREAD_QUEUE_INIT_SIZE 50
+#define THREAD_QUEUE_DOUBLE_SIZE 30
+struct thread_queue_element {
+    int action;
+    int urgency;
+};
+struct thread_queue_t {
+    long long len;
+    long long bottom;
+    long long top;
+    struct thread_queue_element * queue;
+};
+#define TASK_QUEUE static struct thread_queue_t
+#define TASK_QUEUE_ELEM static struct thread_queue_element
 
 mongoc_client_t *mongo_client = NULL;
 redisContext *redis_client = NULL;

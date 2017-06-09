@@ -38,11 +38,12 @@ int add_size_vect(struct vec_t *vec, unsigned int addSize) {
         return VEC_FAILURE;
     }
     vec->elements = newSize;
+    vec->len += addSize;
     return VEC_SUCCESS;
 }
 
 int append_vect(struct vec_t *vec, struct vec_element_t *e) {
-    if (vec->ptr >= vec->len) {
+    if (vec->ptr+1 >= vec->len) {
         if(add_size_vect(vec, DOUBLE_SIZE)==VEC_FAILURE) {
             PRINT("append","Throwing realloc failure down the link.");
             return VEC_FAILURE;
@@ -73,24 +74,6 @@ int pop_back_vect(struct vec_t *vec, struct vec_element_t *recv) {
     recv->redis = d1.redis;
     recv->collection = d1.collection;
     recv->misc = d1.misc;
-    return VEC_SUCCESS;
-}
-
-int pop_front_vect(struct vec_t *vec, struct vec_element_t *recv) {
-    if(vec->ptr==-1) {
-        PRINT("pop_front_vect", "vector is empty. Nothing to pop!");
-        return VEC_FAILURE;
-    }
-    const struct vec_element_t t1 = vec->elements[0];
-    recv->redis = t1.redis;
-    recv->collection = t1.collection;
-    recv->misc = t1.misc;
-    if(vec->ptr==0) {
-        --vec->ptr;
-    } else {
-        void * p = &vec->elements[1];
-        vec->elements = p;
-    }
     return VEC_SUCCESS;
 }
 

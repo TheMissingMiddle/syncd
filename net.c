@@ -11,7 +11,6 @@
 
 #define BACKLOG 50
 #define PRINT(func, x) printf("%s(): Err: %s\n", func, x)
-#define something 0
 
 int net_handler(syncd_config_t *config) {
     const char *bind_addr = config->address;
@@ -71,7 +70,7 @@ int net_handler(syncd_config_t *config) {
                 int l = strlen(s);
                 write(connfd, &l, sizeof(int));
                 write(connfd, s, l);
-                // TODO push
+                // TODO pull
 
                 break;
             } else {

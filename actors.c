@@ -7,14 +7,6 @@
  */
 
 #include "actors.h"
-#include "parseconfig.h"
-#include "configobject.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <libbson-1.0/bson.h>
-#include <libmongoc-1.0/mongoc.h>
-#include <hiredis/hiredis.h>
-#include <unistd.h>
 
 #define MONGO_CONNECT_FAILURE 10
 #define MONGO_CONNECT_SUCCESS 110

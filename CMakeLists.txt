@@ -8,7 +8,7 @@ project(magicsync)
 set(CMAKE_C_STANDARD 11)
 
 # Set source files
-set(SOURCE_FILES main.c parseconfig.c parseconfig.h configobject.c configobject.h pushactions.c pushactions.h pullactions.c pullactions.h net.c net.h)
+set(SOURCE_FILES main.c parseconfig.c parseconfig.h configobject.c configobject.h pushactions.c pushactions.h pullactions.c pullactions.h net.c net.h actors.c actors.h)
 
 # Include scripts to find required libraries
 include(Findhiredis.cmake)

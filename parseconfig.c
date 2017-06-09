@@ -198,4 +198,10 @@ void config_destroy(syncd_config_t * config) {
         bson_free((char *)config->pull.elements[i].collection);
         bson_free((char *)config->pull.elements[i].misc);
     }
+    free(config->push.elements);
+    free(config->pull.elements);
+    config->push.ptr = -1;
+    config->push.len = 0;
+    config->pull.ptr = -1;
+    config->pull.len = 0;
 }

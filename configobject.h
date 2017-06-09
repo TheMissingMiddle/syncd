@@ -49,5 +49,8 @@ int pop_back_vect(struct vec_t *vec, struct vec_element_t *recv);
 
 int pop_front_vect(struct vec_t *vec, struct vec_element_t *recv);
 
-int vect_iter_next(struct vec_t * vec, struct vec_element_t * recv);
+int vect_iter_next(struct vec_t *vec, struct vec_element_t *recv);
+
+void vect_incomplete_free(struct vec_t *vec);
+
 #endif //MAGICSYNC_CONFIGOBJECT_H

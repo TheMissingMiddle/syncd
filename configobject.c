@@ -106,5 +106,10 @@ int vect_iter_next(struct vec_t * vec, struct vec_element_t * recv) {
         return 0;
     }
 }
-
+// use with extreme caution!!
+void vect_incomplete_free(struct vec_t * vec) {
+    vec->len = 0;
+    vec->ptr = -1;
+    free(vec->elements);
+}
 

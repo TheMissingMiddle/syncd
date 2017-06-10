@@ -28,6 +28,10 @@ struct vec_t {
 #define SYNCD_GLOBAL_VECTOR static struct vec_t
 typedef struct {
     int port;
+    int redis_port;
+    int mongo_port;
+    const char *redis_address;
+    const char *mongo_address;
     const char *address;
     const char *mongo_db_name;
     struct vec_t push;

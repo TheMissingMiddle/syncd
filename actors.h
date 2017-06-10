@@ -60,26 +60,27 @@ struct thread_queue_t {
     long long len;
     long long bottom;
     long long top;
-    struct thread_queue_element * queue;
+    struct thread_queue_element *queue;
 };
 #define TASK_QUEUE static struct thread_queue_t
 #define TASK_QUEUE_ELEM static struct thread_queue_element
 
-mongoc_client_t *mongo_client = NULL;
-redisContext *redis_client = NULL;
+redisContext *init_redis(const char *redis_address, int redis_port, redisContext *redis_client);
 
-int init_redis(const char *redis_address, int redis_port);
+void cleanup_redis(redisContext *redis_client);
 
-void cleanup_redis();
+int init_mongo(const char *mongodb_address, mongoc_client_t *mongo_client);
 
-int init_mongo(const char *mongodb_address);
+void cleanup_mongo(mongoc_client_t *mongo_client);
 
-void cleanup_mongo();
+}
 
+int pull(syncd_config_t *config, mongoc_client_t *mongo_client, redisContext *redis_client);
 
-int pull(syncd_config_t *config);
+int push(syncd_config_t *config, mongoc_client_t *mongo_client, redisContext *redis_client);
 
+int do_async_push(syncd_config_t config);
 
-int push(syncd_config_t *config);
+int do_async_pull(syncd_config_t config);
 
 #endif //MAGICSYNC_ACTORS_H

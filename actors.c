@@ -7,6 +7,9 @@
  */
 
 #include "actors.h"
+#include "configobject.h"
+#include <pthread.h>
+
 
 #define MONGO_CONNECT_FAILURE 10
 #define MONGO_CONNECT_SUCCESS 110
@@ -20,23 +23,22 @@
 #define CUSTOM_MONGO_FIND_WITH_OPTS(collection, query) mongoc_collection_find(collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL)
 #define PRINT(fn, x) printf("%s(): ERR : %s\n", fn, x)
 
-int init_redis(const char *redis_address, int redis_port) {
+
+redisContext *init_redis(const char *redis_address, int redis_port, redisContext *redis_client) {
     redis_client = redisConnect(redis_address, redis_port);
     if (connect == NULL) {
         return REDIS_CONNECT_FAILURE;
     } else if (redis_client->err) {
         printf("Redis Connect Error: %s\n", redis_client->errstr);
-        return REDIS_CONNECT_FAILURE;
+        return
     }
-    redisCommand(redis_client, "AUTH foobar");
-    return REDIS_CONNECT_SUCCESS;
 }
 
-void cleanup_redis() {
+void cleanup_redis(redisContext *redis_client) {
     redisFree(redis_client);
 }
 
-int init_mongo(const char *mongodb_address) {
+int init_mongo(const char *mongodb_address, mongoc_client_t *mongo_client) {
     if ((mongo_client = mongoc_client_new(mongodb_address)) == NULL) {
         printf("mongo init failed\n");
         return MONGO_CONNECT_FAILURE;
@@ -44,13 +46,13 @@ int init_mongo(const char *mongodb_address) {
     return MONGO_CONNECT_SUCCESS;
 }
 
-void cleanup_mongo() {
+void cleanup_mongo(mongoc_client_t *mongo_client) {
     mongoc_client_destroy(mongo_client);
     mongoc_cleanup();
 }
 
 
-int pull(syncd_config_t *config) {
+int pull(syncd_config_t *config, mongoc_client_t *mongo_client, redisContext *redis_client) {
     struct vec_element_t recv;
     while (vect_iter_next(&(config->pull), &recv)) {
         const char *src_collection = recv.collection;
@@ -92,7 +94,7 @@ int pull(syncd_config_t *config) {
 }
 
 
-int push(syncd_config_t *config) {
+int push(syncd_config_t *config, mongoc_client_t *mongo_client, redisContext *redis_client) {
     // arguments check
     if (config == NULL || redis_client == NULL || mongo_client == NULL) {
         printf("push(): ERR one or more arguments point to NULL\n");
@@ -274,4 +276,104 @@ int push(syncd_config_t *config) {
     }
     freeReplyObject(keys);
     return EXIT_SUCCESS;
+}
+
+struct syncd_thread_args {
+    syncd_config_t config;
+    redisContext *redis_client;
+    mongoc_client_t *mongo_client;
+};
+
+void *async_push_worker(void *data) {
+    struct syncd_thread_args *args = data;
+    syncd_config_t config = args->config;
+    redisContext *redis_client = args->redis_client;
+    mongoc_client_t *mongo_client = args->mongo_client;
+    push(&config, mongo_client, redis_client);
+    return NULL;
+}
+
+void *async_pull_worker(void *data) {
+    struct syncd_thread_args *args = data;
+    syncd_config_t config = args->config;
+    redisContext *redis_client = args->redis_client;
+    mongoc_client_t *mongo_client = args->mongo_client;
+    pull(&config, mongo_client, redis_client);
+    return NULL;
+}
+
+int do_async_push(syncd_config_t config) {
+    redisContext *redis_client;
+    redis_client = redisConnect(config.mongo_address, config.redis_port);
+    if (redis_client == NULL) {
+        PRINT("do_async_push", "redis client init failure\n");
+        return GENERAL_FAILURE;
+    } else if (redis_client->err) {
+        PRINT("do_async_push", "redis client init failure\n");
+        return GENERAL_FAILURE;
+    }
+    mongoc_client_t *mongo_client = mongoc_client_new(config.mongo_address);
+    if (mongo_client == NULL) {
+        PRINT("do_async_push", "mongo client init failure\n");
+        return GENERAL_FAILURE;
+    }
+    pthread_t apt;
+    // in case we're not passing along a static struct
+    static syncd_config_t passed_config;
+    passed_config.push = config.push;
+    passed_config.pull = config.pull;
+    passed_config.mongo_address = config.mongo_address;
+    passed_config.redis_port = config.redis_port;
+    passed_config.redis_address = config.redis_address;
+    passed_config.mongo_port = config.mongo_port;
+    passed_config.address = config.address;
+    passed_config.port = config.port;
+    passed_config.mongo_db_name = config.mongo_db_name;
+    struct syncd_thread_args aargs = {.redis_client = redis_client,
+            .mongo_client = mongo_client,
+            .config = config};
+    pthread_create(&apt, NULL,async_push_worker, &aargs);
+    // finally
+    redisFree(redis_client);
+    mongoc_client_destroy(mongo_client);
+    mongoc_cleanup();
+    return GENERAL_SUCCESS;
+}
+
+int do_async_pull(syncd_config_t config) {
+    redisContext *redis_client;
+    redis_client = redisConnect(config.mongo_address, config.redis_port);
+    if (redis_client == NULL) {
+        PRINT("do_async_push", "redis client init failure\n");
+        return GENERAL_FAILURE;
+    } else if (redis_client->err) {
+        PRINT("do_async_push", "redis client init failure\n");
+        return GENERAL_FAILURE;
+    }
+    mongoc_client_t *mongo_client = mongoc_client_new(config.mongo_address);
+    if (mongo_client == NULL) {
+        PRINT("do_async_push", "mongo client init failure\n");
+        return GENERAL_FAILURE;
+    }
+    pthread_t apt;
+    // in case we're not passing along a static struct
+    static syncd_config_t passed_config;
+    passed_config.push = config.push;
+    passed_config.pull = config.pull;
+    passed_config.mongo_address = config.mongo_address;
+    passed_config.redis_port = config.redis_port;
+    passed_config.redis_address = config.redis_address;
+    passed_config.mongo_port = config.mongo_port;
+    passed_config.address = config.address;
+    passed_config.port = config.port;
+    passed_config.mongo_db_name = config.mongo_db_name;
+    struct syncd_thread_args aargs = {.redis_client = redis_client,
+            .mongo_client = mongo_client,
+            .config = config};
+    pthread_create(&apt, NULL,async_pull_worker, &aargs);
+    // finally
+    redisFree(redis_client);
+    mongoc_client_destroy(mongo_client);
+    mongoc_cleanup();
+    return GENERAL_SUCCESS;
 }

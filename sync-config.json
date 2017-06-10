@@ -2,6 +2,14 @@
   "port": 1333,
   "address": "127.0.0.1",
   "mongo-db-name": "tmmbackend",
+  "redis-config": {
+    "address": "127.0.0.1",
+    "port": 6379
+  },
+  "mongo-config": {
+    "address": "mongodb://localhost",
+    "port": 1111
+  },
   "push": [
     {
       "collection": "messages",

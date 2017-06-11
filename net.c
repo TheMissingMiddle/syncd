@@ -14,7 +14,49 @@
 #define PRINT(func, x) printf("%s(): Err: %s\n", func, x)
 
 void * handle(void * data) {
+    int connfd = *(int*)data;
+    int str_len, n;
+    char *str_buffer;
+    if(read(connfd, &str_len, sizeof(int))<0) {
+        close(connfd);
+        return NULL;
+    }
+    printf("net_handler(): connection established. the len of string is %d\n", str_len);
+    str_buffer = malloc(sizeof(char) * (str_len + 1));
+    n = read(connfd, str_buffer, sizeof(char) * str_len);
+    if (n < 0) {
+        PRINT("net_handler", "recv str error\n");
+        free(data);
+        free(str_buffer);
+        close(connfd);
+        return NULL;
+    }
+    str_buffer[str_len] = '\0'; // str_len+1th place, start from 0
+    if(strcmp("push", str_buffer) == 0) {
+        char * s= "ok:push";
+        printf("OK:PUSH\n");
+        int l = strlen(s);
+        write(connfd, &l, sizeof(int));
+        write(connfd, s, l);
+        // TODO push
+        do_async_push(NULL); // TODO config
+    } else if (strcmp("pull", str_buffer) == 0) {
+        printf("OK:PULL\n");
+        char * s = "ok:pull";
+        int l = strlen(s);
+        write(connfd, &l, sizeof(int));
+        write(connfd, s, l);
+        // TODO pull
+        do_async_pull(NULL); // TODO CONFIG
+    } else {
+        PRINT("net_handler", "err - the request isn't valid.");
+        printf("\tdebug info: %s", str_buffer);
 
+    }
+    free(data);
+    free(str_buffer);
+    close(connfd);
+    return NULL;
 }
 
 int net_handler(syncd_config_t *config) {
@@ -39,57 +81,14 @@ int net_handler(syncd_config_t *config) {
     }
     listen(sockfd, BACKLOG);
     cli_len = sizeof(client_addr);
-    pthread_t
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
     while(1) {
         connfd = accept(sockfd, (struct sockaddr *) &client_addr, &cli_len);
-
-    }
-    while (1) {
-        printf("net_handler(): waiting for connection...\n");
-        connfd = accept(sockfd, (struct sockaddr *) &client_addr, &cli_len);
-        while (1) {
-            int str_len;
-            char *str_buffer;
-            if(read(connfd, &str_len, sizeof(int))<0) {
-                break;
-            }
-            printf("net_handler(): connection established. the len of string is %d\n", str_len);
-            str_buffer = malloc(sizeof(char) * (str_len + 1));
-            n = read(connfd, str_buffer, sizeof(char) * str_len);
-            if (n < 0) {
-                PRINT("net_handler", "recv str error\n");
-                free(str_buffer);
-                break;
-            }
-            str_buffer[str_len] = '\0'; // str_len+1th place, start from 0
-            if(strcmp("push", str_buffer) == 0) {
-                char * s= "ok:push";
-                printf("OK:PUSH\n");
-                int l = strlen(s);
-                write(connfd, &l, sizeof(int));
-                write(connfd, s, l);
-                // TODO push
-
-                break;
-            } else if (strcmp("pull", str_buffer) == 0) {
-                printf("OK:PULL\n");
-                char * s = "ok:pull";
-                int l = strlen(s);
-                write(connfd, &l, sizeof(int));
-                write(connfd, s, l);
-                // TODO pull
-
-                break;
-            } else {
-                PRINT("net_handler", "err - the request isn't valid.");
-                printf("\tdebug info: %s", str_buffer);
-                free(str_buffer);
-                break;
-            }
-        }
-        close(connfd);
+        pthread_t connthrd;
+        int * s = malloc(sizeof(int));
+        *s = connfd;
+        pthread_create(&connthrd, NULL, handle, s);
     }
     return NET_SUCCESS;
 #pragma clang diagnostic pop

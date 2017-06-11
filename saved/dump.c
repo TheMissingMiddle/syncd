@@ -205,3 +205,53 @@ bson_iter_t get_field_not_array(const bson_t *b, char *key) {
         printf("get_field_not_array: input invalid!!\n");
         return iter;
     }
+}
+
+#ifdef NET_C
+
+while (1) {
+        printf("net_handler(): waiting for connection...\n");
+        connfd = accept(sockfd, (struct sockaddr *) &client_addr, &cli_len);
+        while (1) {
+            int str_len;
+            char *str_buffer;
+            if(read(connfd, &str_len, sizeof(int))<0) {
+                break;
+            }
+            printf("net_handler(): connection established. the len of string is %d\n", str_len);
+            str_buffer = malloc(sizeof(char) * (str_len + 1));
+            n = read(connfd, str_buffer, sizeof(char) * str_len);
+            if (n < 0) {
+                PRINT("net_handler", "recv str error\n");
+                free(str_buffer);
+                break;
+            }
+            str_buffer[str_len] = '\0'; // str_len+1th place, start from 0
+            if(strcmp("push", str_buffer) == 0) {
+                char * s= "ok:push";
+                printf("OK:PUSH\n");
+                int l = strlen(s);
+                write(connfd, &l, sizeof(int));
+                write(connfd, s, l);
+                // TODO push
+
+                break;
+            } else if (strcmp("pull", str_buffer) == 0) {
+                printf("OK:PULL\n");
+                char * s = "ok:pull";
+                int l = strlen(s);
+                write(connfd, &l, sizeof(int));
+                write(connfd, s, l);
+                // TODO pull
+
+                break;
+            } else {
+                PRINT("net_handler", "err - the request isn't valid.");
+                printf("\tdebug info: %s", str_buffer);
+                free(str_buffer);
+                break;
+            }
+        }
+        close(connfd);
+    }
+#endif

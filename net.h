@@ -9,6 +9,9 @@
 
 #endif //MAGICSYNC_NET_H
 #define NET_SUCCESS 1
-int net_handler(syncd_config_t * config) ;
+
+int net_handler(syncd_config_t *config);
+
+void *start_net_handler(void *d);
 
 #define NET_FAILURE 0

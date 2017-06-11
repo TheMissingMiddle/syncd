@@ -4,6 +4,7 @@
 
 #include "net.h"
 #include "actors.h"
+#include "configobject.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -12,6 +13,8 @@
 #include <pthread.h>
 #define BACKLOG 50
 #define PRINT(func, x) printf("%s(): Err: %s\n", func, x)
+
+ syncd_config_t _config;
 
 void * handle(void * data) {
     int connfd = *(int*)data;
@@ -39,7 +42,7 @@ void * handle(void * data) {
         write(connfd, &l, sizeof(int));
         write(connfd, s, l);
         // TODO push
-        do_async_push(NULL); // TODO config
+        do_async_push(_config); // TODO config
     } else if (strcmp("pull", str_buffer) == 0) {
         printf("OK:PULL\n");
         char * s = "ok:pull";
@@ -47,7 +50,7 @@ void * handle(void * data) {
         write(connfd, &l, sizeof(int));
         write(connfd, s, l);
         // TODO pull
-        do_async_pull(NULL); // TODO CONFIG
+        do_async_pull(_config); // TODO CONFIG
     } else {
         PRINT("net_handler", "err - the request isn't valid.");
         printf("\tdebug info: %s", str_buffer);
@@ -60,6 +63,14 @@ void * handle(void * data) {
 }
 
 int net_handler(syncd_config_t *config) {
+    _config.pull = config->pull;
+    _config.push = config->push;
+    _config.mongo_db_name = config->mongo_db_name;
+    _config.address = config->address;
+    _config.redis_port = config->redis_port;
+    _config.redis_address = config->redis_address;
+    _config.mongo_port = config->mongo_port;
+    _config.mongo_address = config->mongo_address;
     const char *bind_addr = config->address;
     int bind_port = config->port;
     int sockfd, connfd;
@@ -92,4 +103,12 @@ int net_handler(syncd_config_t *config) {
     }
     return NET_SUCCESS;
 #pragma clang diagnostic pop
+}
+
+void * start_net_handler(void *d) {
+    int i = net_handler(d);
+    if(i == NET_FAILURE) {
+        printf("start_net_handler(): unknown error occured. failred to start network handler\n");
+        return NULL;
+    }
 }

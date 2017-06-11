@@ -3,14 +3,19 @@
 //
 
 #include "net.h"
+#include "actors.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <memory.h>
-
+#include <pthread.h>
 #define BACKLOG 50
 #define PRINT(func, x) printf("%s(): Err: %s\n", func, x)
+
+void * handle(void * data) {
+
+}
 
 int net_handler(syncd_config_t *config) {
     const char *bind_addr = config->address;
@@ -34,9 +39,13 @@ int net_handler(syncd_config_t *config) {
     }
     listen(sockfd, BACKLOG);
     cli_len = sizeof(client_addr);
-
+    pthread_t
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
+    while(1) {
+        connfd = accept(sockfd, (struct sockaddr *) &client_addr, &cli_len);
+
+    }
     while (1) {
         printf("net_handler(): waiting for connection...\n");
         connfd = accept(sockfd, (struct sockaddr *) &client_addr, &cli_len);

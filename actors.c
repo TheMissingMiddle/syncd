@@ -332,7 +332,7 @@ int do_async_push(syncd_config_t config) {
     struct syncd_thread_args aargs = {.redis_client = redis_client,
             .mongo_client = mongo_client,
             .config = config};
-    pthread_create(&apt, NULL,async_push_worker, &aargs);
+    pthread_create(&apt, NULL, async_push_worker, &aargs);
     // finally
     redisFree(redis_client);
     mongoc_client_destroy(mongo_client);
@@ -370,7 +370,7 @@ int do_async_pull(syncd_config_t config) {
     struct syncd_thread_args aargs = {.redis_client = redis_client,
             .mongo_client = mongo_client,
             .config = config};
-    pthread_create(&apt, NULL,async_pull_worker, &aargs);
+    pthread_create(&apt, NULL, async_pull_worker, &aargs);
     // finally
     redisFree(redis_client);
     mongoc_client_destroy(mongo_client);
